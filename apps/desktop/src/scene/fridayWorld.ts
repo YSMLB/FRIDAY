@@ -24,35 +24,29 @@ function fibonacciSphere(count: number, jitter = 0): THREE.Vector3[] {
   return pts;
 }
 
-function noise2(x: number, z: number): number {
-  return (
-    Math.sin(x * 0.31) * Math.cos(z * 0.27) * 0.55 +
-    Math.sin(x * 0.73 + z * 0.41) * 0.22 +
-    Math.sin(x * 1.6) * Math.cos(z * 1.35) * 0.07
-  );
-}
-
 function makeTerrain(): THREE.Mesh {
-  const geo = new THREE.PlaneGeometry(48, 48, 110, 110);
+  const geo = new THREE.PlaneGeometry(42, 42, 90, 90);
   geo.rotateX(-Math.PI / 2);
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i);
     const z = pos.getZ(i);
     const d = Math.hypot(x, z);
-    const crater = -Math.exp(-d * d * 0.012) * 0.55;
-    pos.setY(i, noise2(x, z) * 0.42 + crater);
+    const y =
+      Math.sin(x * 0.28) * Math.cos(z * 0.24) * 0.28 +
+      Math.sin(x * 0.8 + z * 0.5) * 0.08 -
+      Math.exp(-d * d * 0.014) * 0.5;
+    pos.setY(i, y);
   }
   geo.computeVertexNormals();
   const mat = new THREE.MeshStandardMaterial({
-    color: 0x16181c,
-    roughness: 0.96,
-    metalness: 0.04,
-    flatShading: false,
+    color: 0x0a1520,
+    roughness: 0.94,
+    metalness: 0.08,
   });
   const mesh = new THREE.Mesh(geo, mat);
   mesh.receiveShadow = true;
-  mesh.position.y = -1.15;
+  mesh.position.y = -1.05;
   return mesh;
 }
 
@@ -78,11 +72,10 @@ function patchShell(
       .replace(
         "#include <begin_vertex>",
         `#include <begin_vertex>
-         float wave = sin(transformed.x * 2.05 + uTime * 0.31)
-                    * sin(transformed.y * 1.72 + 0.4)
-                    * sin(transformed.z * 2.28 + uTime * 0.19);
-         float swell = sin(uTime * 0.45 + transformed.y * 3.0) * 0.35;
-         transformed += normalize(transformed + 0.0001) * (wave + swell) * uMorph;`
+         float wave = sin(transformed.x * 1.55 + uTime * 0.22)
+                    * sin(transformed.y * 1.35 + 0.25)
+                    * sin(transformed.z * 1.7 + uTime * 0.15);
+         transformed += normalize(transformed + 0.0001) * wave * uMorph;`
       )
       .replace(
         "#include <project_vertex>",
@@ -120,13 +113,15 @@ function patchShell(
 function makeShell(radius: number, detail: number, sites: THREE.Vector3[], wall: number, morph: number, key: string) {
   const geo = new THREE.IcosahedronGeometry(radius, detail);
   const mat = new THREE.MeshPhysicalMaterial({
-    color: 0xe7e2d8,
-    roughness: 0.72,
-    metalness: 0.04,
-    clearcoat: 0.18,
-    clearcoatRoughness: 0.55,
-    sheen: 0.25,
-    sheenColor: new THREE.Color(0xd8d2c6),
+    color: 0xd7e8f2,
+    roughness: 0.42,
+    metalness: 0.12,
+    clearcoat: 0.55,
+    clearcoatRoughness: 0.28,
+    sheen: 0.4,
+    sheenColor: new THREE.Color(0x3ad6e8),
+    emissive: new THREE.Color(0x0a2a36),
+    emissiveIntensity: 0.18,
     side: THREE.DoubleSide,
     shadowSide: THREE.DoubleSide,
   });
@@ -140,22 +135,24 @@ function makeShell(radius: number, detail: number, sites: THREE.Vector3[], wall:
 function makeShards(): THREE.Group {
   const group = new THREE.Group();
   const mat = new THREE.MeshPhysicalMaterial({
-    color: 0xded9d0,
-    roughness: 0.5,
-    metalness: 0.08,
+    color: 0xb8d4e0,
+    roughness: 0.35,
+    metalness: 0.2,
+    emissive: 0x123848,
+    emissiveIntensity: 0.25,
   });
-  for (let i = 0; i < 18; i++) {
+  for (let i = 0; i < 14; i++) {
     const geo =
-      i % 3 === 0
-        ? new THREE.IcosahedronGeometry(0.045 + Math.random() * 0.05, 0)
-        : new THREE.BoxGeometry(0.03, 0.12 + Math.random() * 0.1, 0.02);
+      i % 2 === 0
+        ? new THREE.IcosahedronGeometry(0.035 + Math.random() * 0.04, 0)
+        : new THREE.BoxGeometry(0.02, 0.1 + Math.random() * 0.08, 0.015);
     const mesh = new THREE.Mesh(geo, mat);
     const phi = Math.acos(2 * Math.random() - 1);
     const theta = Math.random() * Math.PI * 2;
-    const r = 1.35 + Math.random() * 0.55;
+    const r = 1.28 + Math.random() * 0.45;
     mesh.position.set(
       r * Math.sin(phi) * Math.cos(theta),
-      r * Math.cos(phi) * 0.75,
+      r * Math.cos(phi) * 0.7,
       r * Math.sin(phi) * Math.sin(theta)
     );
     mesh.rotation.set(Math.random() * 6, Math.random() * 6, Math.random() * 6);
@@ -175,79 +172,93 @@ export function createFridayWorld(canvas: HTMLCanvasElement): WorldHandle {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
+  renderer.toneMappingExposure = 1.12;
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-  renderer.setClearColor(0x0b0d11, 1);
+  renderer.setClearColor(0x050a12, 1);
 
   const scene = new THREE.Scene();
-  scene.fog = new THREE.FogExp2(0x0b0d11, 0.046);
+  scene.fog = new THREE.FogExp2(0x050a12, 0.048);
 
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 80);
-  camera.position.set(0.15, 0.72, 5.15);
-  camera.lookAt(0, 0.42, 0);
+  camera.position.set(0.1, 0.68, 4.9);
+  camera.lookAt(0, 0.4, 0);
 
-  scene.add(new THREE.AmbientLight(0x1c2430, 0.32));
-  const hemi = new THREE.HemisphereLight(0x8ea0b4, 0x1a1612, 0.65);
-  scene.add(hemi);
+  scene.add(new THREE.AmbientLight(0x14304a, 0.45));
+  scene.add(new THREE.HemisphereLight(0x6eb8d8, 0x061018, 0.7));
 
-  const key = new THREE.DirectionalLight(0xfff3e4, 2.15);
-  key.position.set(-5.2, 6.4, 3.4);
+  const key = new THREE.DirectionalLight(0xd8f4ff, 1.85);
+  key.position.set(-4.6, 5.8, 3.2);
   key.castShadow = true;
   key.shadow.mapSize.set(1024, 1024);
   key.shadow.camera.near = 1;
-  key.shadow.camera.far = 22;
-  key.shadow.camera.left = -6;
-  key.shadow.camera.right = 6;
-  key.shadow.camera.top = 6;
-  key.shadow.camera.bottom = -6;
+  key.shadow.camera.far = 20;
+  key.shadow.camera.left = -5;
+  key.shadow.camera.right = 5;
+  key.shadow.camera.top = 5;
+  key.shadow.camera.bottom = -5;
   scene.add(key);
 
-  const rim = new THREE.DirectionalLight(0x3ad6e8, 0.22);
-  rim.position.set(5.4, 1.2, -3.2);
+  const rim = new THREE.DirectionalLight(0x3ad6e8, 0.55);
+  rim.position.set(4.8, 1.4, -2.8);
   scene.add(rim);
 
-  const fill = new THREE.DirectionalLight(0x4a5564, 0.28);
-  fill.position.set(2.2, -0.6, 5);
+  const fill = new THREE.PointLight(0x1a6a88, 1.1, 12, 2);
+  fill.position.set(0, 0.4, 2.2);
   scene.add(fill);
 
   const terrain = makeTerrain();
   scene.add(terrain);
 
-  const coreMat = new THREE.MeshPhysicalMaterial({
-    color: 0xefeae1,
-    roughness: 0.48,
-    metalness: 0.06,
-    clearcoat: 0.35,
-    clearcoatRoughness: 0.4,
-  });
-  const core = new THREE.Mesh(new THREE.SphereGeometry(0.7, 64, 64), coreMat);
+  const core = new THREE.Mesh(
+    new THREE.SphereGeometry(0.68, 64, 64),
+    new THREE.MeshPhysicalMaterial({
+      color: 0xe8f6ff,
+      roughness: 0.28,
+      metalness: 0.15,
+      clearcoat: 0.7,
+      clearcoatRoughness: 0.2,
+      emissive: new THREE.Color(0x146078),
+      emissiveIntensity: 0.35,
+    })
+  );
   core.castShadow = true;
   core.receiveShadow = true;
 
-  const shellA = makeShell(1.05, 5, fibonacciSphere(38, 0.12), 0.055, 0.11, "shell-a");
-  const shellB = makeShell(1.2, 4, fibonacciSphere(24, 0.16), 0.042, 0.16, "shell-b");
-  shellB.rotation.set(0.4, 0.7, 0.15);
+  const glow = new THREE.Mesh(
+    new THREE.SphereGeometry(0.78, 32, 32),
+    new THREE.MeshBasicMaterial({
+      color: 0x3ad6e8,
+      transparent: true,
+      opacity: 0.08,
+      depthWrite: false,
+    })
+  );
 
-  const ringGeo = new THREE.TorusGeometry(1.38, 0.007, 8, 96);
-  const ringMat = new THREE.MeshPhysicalMaterial({
-    color: 0xd8d4cc,
-    roughness: 0.35,
-    metalness: 0.12,
-  });
-  const ring = new THREE.Mesh(ringGeo, ringMat);
-  ring.rotation.x = Math.PI * 0.42;
-  ring.rotation.y = 0.3;
+  const shellA = makeShell(1.02, 5, fibonacciSphere(34, 0.1), 0.048, 0.07, "shell-a");
+  const shellB = makeShell(1.16, 4, fibonacciSphere(22, 0.14), 0.038, 0.1, "shell-b");
+  shellB.rotation.set(0.35, 0.55, 0.12);
+
+  const ring = new THREE.Mesh(
+    new THREE.TorusGeometry(1.32, 0.006, 8, 100),
+    new THREE.MeshPhysicalMaterial({
+      color: 0x7ed7ea,
+      roughness: 0.25,
+      metalness: 0.35,
+      emissive: 0x3ad6e8,
+      emissiveIntensity: 0.35,
+    })
+  );
+  ring.rotation.x = Math.PI * 0.4;
 
   const shards = makeShards();
-
   const rig = new THREE.Group();
-  rig.position.y = 0.55;
-  rig.add(core, shellA, shellB, ring, shards);
+  rig.position.y = 0.52;
+  rig.add(core, glow, shellA, shellB, ring, shards);
   scene.add(rig);
 
   let status = "idle";
-  const disposables: THREE.Object3D[] = [terrain, core, shellA, shellB, ring, shards];
+  const disposables: THREE.Object3D[] = [terrain, core, glow, shellA, shellB, ring, shards];
 
   const resize = () => {
     const parent = canvas.parentElement;
@@ -267,25 +278,26 @@ export function createFridayWorld(canvas: HTMLCanvasElement): WorldHandle {
     const speaking = status === "speaking";
     const listening = status === "listening";
     const thinking = status === "thinking";
-    const spin = speaking ? 0.012 : listening ? 0.007 : thinking ? 0.004 : 0.0032;
+    const spin = speaking ? 0.011 : listening ? 0.0065 : thinking ? 0.0035 : 0.0028;
 
     shellA.rotation.y += spin;
-    shellB.rotation.y -= spin * 0.65;
-    shellB.rotation.z += spin * 0.12;
-    core.rotation.y -= spin * 0.25;
-    ring.rotation.z += spin * 0.4;
-    shards.rotation.y += spin * 0.5;
-    shards.rotation.x = Math.sin(t * 0.2) * 0.08;
+    shellB.rotation.y -= spin * 0.7;
+    shellB.rotation.z += spin * 0.1;
+    core.rotation.y -= spin * 0.2;
+    ring.rotation.z += spin * 0.35;
+    shards.rotation.y += spin * 0.45;
 
-    const breath = 1 + Math.sin(t * (speaking ? 4.2 : listening ? 2.4 : 1.3)) * (speaking ? 0.018 : 0.01);
+    const breath = 1 + Math.sin(t * (speaking ? 3.8 : listening ? 2.2 : 1.2)) * (speaking ? 0.016 : 0.009);
     rig.scale.setScalar(breath);
+    glow.scale.setScalar(1 + Math.sin(t * 2.1) * 0.04);
 
-    camera.position.x = 0.15 + Math.sin(t * 0.12) * 0.18;
-    camera.position.y = 0.72 + Math.sin(t * 0.09) * 0.06;
-    camera.lookAt(0, 0.42, 0);
+    const coreMat = core.material as THREE.MeshPhysicalMaterial;
+    coreMat.emissiveIntensity = speaking ? 0.7 : listening ? 0.48 : 0.32;
+    rim.intensity = speaking ? 1.05 : listening ? 0.7 : 0.45;
 
-    rim.intensity = speaking ? 0.7 : listening ? 0.42 : 0.2;
-    key.intensity = thinking ? 1.55 : 2.15;
+    camera.position.x = 0.1 + Math.sin(t * 0.11) * 0.14;
+    camera.position.y = 0.68 + Math.sin(t * 0.08) * 0.05;
+    camera.lookAt(0, 0.4, 0);
 
     const shaderA = (shellA.material as THREE.MeshPhysicalMaterial).userData.shader;
     const shaderB = (shellB.material as THREE.MeshPhysicalMaterial).userData.shader;

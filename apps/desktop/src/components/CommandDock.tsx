@@ -12,13 +12,10 @@ interface CommandDockProps {
 export function CommandDock({
   connected,
   onSubmit,
-  onOpenApp,
   onQuit,
   onSettings,
-  browsers,
 }: CommandDockProps) {
   const [text, setText] = useState("");
-  const [appsOpen, setAppsOpen] = useState(false);
 
   const send = (e: FormEvent) => {
     e.preventDefault();
@@ -31,34 +28,13 @@ export function CommandDock({
   return (
     <div className="command-dock">
       <div className="pill-row primary">
-        <button type="button" className="pill solid" onClick={() => setAppsOpen((v) => !v)}>
-          Open apps
+        <button type="button" className="pill solid" onClick={onSettings}>
+          Config
         </button>
         <button type="button" className="pill ghost accent" onClick={onQuit}>
           Stop Friday
         </button>
       </div>
-      {appsOpen ? (
-        <div className="pill-row nested">
-          {(browsers.length ? browsers : ["edge", "chrome", "firefox"]).map((b) => (
-            <button key={b} type="button" className="pill ghost" onClick={() => onOpenApp(b)}>
-              {b}
-            </button>
-          ))}
-          <button type="button" className="pill ghost" onClick={() => onOpenApp("steam")}>
-            steam
-          </button>
-          <button type="button" className="pill ghost" onClick={() => onOpenApp("discord")}>
-            discord
-          </button>
-          <button type="button" className="pill ghost" onClick={() => onOpenApp("cursor")}>
-            cursor
-          </button>
-          <button type="button" className="pill ghost" onClick={onSettings}>
-            config
-          </button>
-        </div>
-      ) : null}
       <form className="command-form" onSubmit={send}>
         <input
           value={text}

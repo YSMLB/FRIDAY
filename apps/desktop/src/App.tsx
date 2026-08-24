@@ -6,6 +6,8 @@ import { SettingsPanel } from "./components/SettingsPanel";
 import { CornerPanels } from "./components/CornerPanels";
 import { FridayCore } from "./components/FridayCore";
 import { CommandDock } from "./components/CommandDock";
+import { FolderRail } from "./components/FolderRail";
+import { SideConsole } from "./components/SideConsole";
 
 export default function App() {
   const {
@@ -29,9 +31,7 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [splashDone, setSplashDone] = useState(false);
-  const [clock, setClock] = useState(() =>
-    new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false })
-  );
+  const [now, setNow] = useState(() => new Date());
 
   const handleSplashDone = () => {
     setSplashDone(true);
@@ -47,9 +47,7 @@ export default function App() {
       }
     };
     window.addEventListener("keydown", onKey);
-    const id = window.setInterval(() => {
-      setClock(new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false }));
-    }, 1000);
+    const id = window.setInterval(() => setNow(new Date()), 1000);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.clearInterval(id);
@@ -57,6 +55,13 @@ export default function App() {
   }, [quitFriday]);
 
   const lastLine = streaming || messages[messages.length - 1]?.content || "";
+  const clock = now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: false });
+  const dateLabel = now.toLocaleDateString("ru-RU", {
+    weekday: "short",
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+  });
 
   return (
     <div className="app influx">
@@ -81,6 +86,9 @@ export default function App() {
           <i className={connected ? "live" : "down"} />
         </div>
       </header>
+
+      <FolderRail onLaunch={openApp} />
+      <SideConsole hud={hud} dateLabel={dateLabel} status={status} />
 
       <CommandDock
         connected={connected}

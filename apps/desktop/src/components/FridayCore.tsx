@@ -7,11 +7,11 @@ interface FridayCoreProps {
 }
 
 const HEAD: Record<string, [string, string]> = {
-  idle: ["I keep watch.", "Say Friday."],
-  listening: ["I am listening.", "Go ahead."],
-  thinking: ["Give me a moment.", "Working it out."],
-  speaking: ["Here is what I have.", ""],
-  error: ["Signal lost.", "I will recover."],
+  idle: ["Ready.", "Say Friday."],
+  listening: ["Listening.", ""],
+  thinking: ["One moment.", ""],
+  speaking: ["Speaking.", ""],
+  error: ["Signal lost.", "Recovering."],
 };
 
 export function FridayCore({ status, line }: FridayCoreProps) {

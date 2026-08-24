@@ -235,6 +235,26 @@ async def system_hud():
     return snapshot()
 
 
+@app.get("/system/library")
+async def system_library():
+    from tools.library import library_snapshot
+
+    return library_snapshot()
+
+
+class LaunchBody(BaseModel):
+    target: str = ""
+
+
+@app.post("/apps/launch")
+async def apps_launch(payload: LaunchBody):
+    from tools.system import open_launch_target
+
+    result = open_launch_target(payload.target)
+    await broadcast({"type": "tool_call", "name": "open_app", "args": {"target": payload.target}})
+    return {"ok": True, "result": result}
+
+
 @app.post("/apps/open")
 async def apps_open(payload: AppOpenBody):
     from tools.system import open_app
@@ -309,10 +329,10 @@ async def websocket_endpoint(ws: WebSocket):
                 if voice:
                     voice.release()
             elif msg_type == "open_app":
-                from tools.system import open_app
+                from tools.system import open_launch_target
 
-                name = msg.get("name", "")
-                result = open_app(name)
+                name = msg.get("name") or msg.get("target") or ""
+                result = open_launch_target(name)
                 await broadcast({"type": "tool_call", "name": "open_app", "args": {"name": name}})
                 await ws.send_json({"type": "chat_done", "content": result})
             elif msg_type == "web_open":
