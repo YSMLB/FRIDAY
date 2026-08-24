@@ -68,19 +68,19 @@ export default function App() {
         />
       )}
 
-      <header className="influx-top">
-        <span className="brand">FRIDAY</span>
-        <span className="clock">{clock}</span>
-        <div className="top-stats">
-          <span>CPU {hud.cpuPercent.toFixed(0)}%</span>
-          <span>RAM {hud.ramPercent.toFixed(0)}%</span>
-          <span>{connected ? "ONLINE" : "OFFLINE"}</span>
-        </div>
-      </header>
-
       <main className="influx-stage">
         <FridayCore status={status} line={lastLine} />
       </main>
+
+      <header className="influx-top">
+        <span className="clock">{clock}</span>
+        <span className="brand">FRIDAY</span>
+        <div className="top-stats">
+          <span>CPU {hud.cpuPercent.toFixed(0)}%</span>
+          <span>RAM {hud.ramPercent.toFixed(0)}%</span>
+          <i className={connected ? "live" : "down"} />
+        </div>
+      </header>
 
       <CommandDock
         connected={connected}

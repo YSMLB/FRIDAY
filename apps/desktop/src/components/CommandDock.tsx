@@ -18,7 +18,7 @@ export function CommandDock({
   browsers,
 }: CommandDockProps) {
   const [text, setText] = useState("");
-  const [safari, setSafari] = useState(false);
+  const [appsOpen, setAppsOpen] = useState(false);
 
   const send = (e: FormEvent) => {
     e.preventDefault();
@@ -30,48 +30,40 @@ export function CommandDock({
 
   return (
     <div className="command-dock">
-      <div className="pill-row">
-        <button type="button" className="pill solid" onClick={() => setSafari((v) => !v)}>
-          Browsers
+      <div className="pill-row primary">
+        <button type="button" className="pill solid" onClick={() => setAppsOpen((v) => !v)}>
+          Open apps
         </button>
-        <button type="button" className="pill ghost" onClick={() => onOpenApp("steam")}>
-          Steam
-        </button>
-        <button type="button" className="pill ghost" onClick={() => onOpenApp("discord")}>
-          Discord
-        </button>
-        <button type="button" className="pill ghost" onClick={() => onOpenApp("cursor")}>
-          Cursor
-        </button>
-        <button type="button" className="pill ghost" onClick={onSettings}>
-          Config
-        </button>
-        <button type="button" className="pill danger" onClick={onQuit}>
-          Stop FRIDAY
+        <button type="button" className="pill ghost accent" onClick={onQuit}>
+          Stop Friday
         </button>
       </div>
-      {safari ? (
+      {appsOpen ? (
         <div className="pill-row nested">
           {(browsers.length ? browsers : ["edge", "chrome", "firefox"]).map((b) => (
-            <button
-              key={b}
-              type="button"
-              className="pill solid"
-              onClick={() => {
-                onOpenApp(b);
-                setSafari(false);
-              }}
-            >
+            <button key={b} type="button" className="pill ghost" onClick={() => onOpenApp(b)}>
               {b}
             </button>
           ))}
+          <button type="button" className="pill ghost" onClick={() => onOpenApp("steam")}>
+            steam
+          </button>
+          <button type="button" className="pill ghost" onClick={() => onOpenApp("discord")}>
+            discord
+          </button>
+          <button type="button" className="pill ghost" onClick={() => onOpenApp("cursor")}>
+            cursor
+          </button>
+          <button type="button" className="pill ghost" onClick={onSettings}>
+            config
+          </button>
         </div>
       ) : null}
       <form className="command-form" onSubmit={send}>
         <input
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={connected ? "Ask Friday to run the PC…" : "Offline"}
+          placeholder={connected ? "Tell Friday what to do" : "Offline"}
         />
         <button type="submit" className="pill solid" disabled={!connected}>
           Send
