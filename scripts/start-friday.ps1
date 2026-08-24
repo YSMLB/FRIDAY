@@ -2,6 +2,8 @@ $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $PSScriptRoot
 $Backend = Join-Path $Root "apps\backend"
 $Desktop = Join-Path $Root "apps\desktop"
+$PidDir = Join-Path $env:APPDATA "FRIDAY"
+$PidFile = Join-Path $PidDir "pids.json"
 $env:PYTHONUNBUFFERED = "1"
 $env:PYTHONIOENCODING = "utf-8"
 $env:BROWSER = "none"
@@ -19,21 +21,22 @@ function Wait-Http($Url, $Tries = 50) {
     return $false
 }
 
+& (Join-Path $PSScriptRoot "stop-friday.ps1") -Quiet
+
 $ollama = Join-Path $env:LOCALAPPDATA "Programs\Ollama\ollama.exe"
 if (Test-Path $ollama) {
     Start-Process $ollama -ArgumentList "serve" -WindowStyle Hidden
 }
 
-& (Join-Path $PSScriptRoot "free-port.ps1") -Port 8765
-& (Join-Path $PSScriptRoot "free-port.ps1") -Port 5173
+New-Item -ItemType Directory -Force -Path $PidDir | Out-Null
 
-Start-Process -FilePath "python" -ArgumentList "main.py" -WorkingDirectory $Backend -WindowStyle Hidden
+$backendProc = Start-Process -FilePath "python" -ArgumentList "main.py" -WorkingDirectory $Backend -WindowStyle Hidden -PassThru
 
 $node = (Get-Command node.exe -ErrorAction SilentlyContinue).Source
 if (-not $node) { throw "Node.js is not installed." }
 $viteJs = Join-Path $Desktop "node_modules\vite\bin\vite.js"
 if (-not (Test-Path $viteJs)) { throw "Vite is not installed. Run npm install in apps/desktop." }
-Start-Process -FilePath $node -ArgumentList @($viteJs, "--host", "127.0.0.1", "--port", "5173") -WorkingDirectory $Desktop -WindowStyle Hidden
+$uiProc = Start-Process -FilePath $node -ArgumentList @($viteJs, "--host", "127.0.0.1", "--port", "5173") -WorkingDirectory $Desktop -WindowStyle Hidden -PassThru
 
 if (-not (Wait-Http "http://127.0.0.1:8765/health" 60)) {
     throw "FRIDAY backend failed to start on port 8765"
@@ -51,4 +54,10 @@ $electronExe = Join-Path $Desktop "node_modules\electron\dist\electron.exe"
 if (-not (Test-Path $electronExe)) {
     throw "Electron is not installed. Run npm install in apps/desktop."
 }
-Start-Process -FilePath $electronExe -ArgumentList "." -WorkingDirectory $Desktop
+$elProc = Start-Process -FilePath $electronExe -ArgumentList "." -WorkingDirectory $Desktop -PassThru
+
+@{
+    backend = $backendProc.Id
+    ui = $uiProc.Id
+    electron = $elProc.Id
+} | ConvertTo-Json | Set-Content -Path $PidFile -Encoding utf8

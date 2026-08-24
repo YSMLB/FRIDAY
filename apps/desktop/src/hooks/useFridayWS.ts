@@ -152,6 +152,9 @@ export function useFridayWS() {
         case "wake_ack":
           pushCorner("WAKE", "Слушаю", "SESSION");
           break;
+        case "app_quit":
+          window.friday?.quit?.();
+          break;
       }
     };
   }, [pushCorner, send]);
@@ -208,6 +211,11 @@ export function useFridayWS() {
     [send]
   );
 
+  const quitFriday = useCallback(() => {
+    send({ type: "quit_app" });
+    window.friday?.quit?.();
+  }, [send]);
+
   return {
     connected,
     status,
@@ -224,5 +232,6 @@ export function useFridayWS() {
     toggleVoice,
     openApp,
     openWeb,
+    quitFriday,
   };
 }

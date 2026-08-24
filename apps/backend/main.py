@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import threading
+import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -99,13 +100,19 @@ async def handle_chat(content: str, speak: bool = True) -> None:
         await broadcast({"type": "confirm_request", "actionId": action_id, "message": message})
 
     try:
-        from tools.registry import execute_tool
+        from tools.registry import CONFIRM_TOOLS, execute_tool
         from voice.intents import match_intent
 
         intent = match_intent(content)
         if intent:
             await on_tool(intent["name"], intent["args"])
-            result, _needs = await execute_tool(intent["name"], intent["args"])
+            action_id = str(uuid.uuid4()) if intent["name"] in CONFIRM_TOOLS else None
+            result, needs = await execute_tool(intent["name"], intent["args"], action_id)
+            if needs and action_id:
+                await on_confirm(action_id, f"Подтверди {intent['name']}: {intent['args']}")
+                if voice:
+                    voice.release()
+                return
             await broadcast({"type": "chat_done", "content": result})
             if speak and voice and result:
                 await voice.speak(result)
@@ -113,6 +120,8 @@ async def handle_chat(content: str, speak: bool = True) -> None:
                 voice.release()
             else:
                 await set_status("idle")
+            if intent["name"] == "quit_friday":
+                await broadcast({"type": "app_quit"})
             return
 
         result = await agent.run(content, on_delta, on_tool, on_confirm)
@@ -312,6 +321,8 @@ async def websocket_endpoint(ws: WebSocket):
                 url = msg.get("url") or ""
                 if url:
                     webbrowser.open(url)
+            elif msg_type == "quit_app":
+                await broadcast({"type": "app_quit"})
             elif msg_type == "confirm_action":
                 result = agent.handle_confirmation(msg.get("actionId", ""), msg.get("confirmed", False))
                 await ws.send_json({"type": "chat_done", "content": result})

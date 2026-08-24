@@ -8,6 +8,6 @@ venv/
 .env
 *.egg-info/
 .DS_Store
-*.tsbuildinfo
+.tmp-frames/
 apps/backend/data/
 apps/desktop/release/

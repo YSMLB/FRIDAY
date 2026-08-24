@@ -1610,3 +1610,199 @@ body {
     grid-template-columns: 140px minmax(0, 1fr) 180px;
   }
 }
+
+/* Cinematic core UI */
+.app.influx {
+  background: #07080a;
+  font-family: "Syne", "Exo 2", sans-serif;
+  color: #f4f4f2;
+}
+
+.app.influx::before,
+.app.influx::after {
+  display: none;
+}
+
+.influx-top {
+  position: relative;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 22px 36px 0;
+  -webkit-app-region: drag;
+}
+
+.influx-top .brand {
+  letter-spacing: 0.42em;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.influx-top .clock {
+  font-size: 13px;
+  letter-spacing: 0.18em;
+  opacity: 0.7;
+}
+
+.influx-top .top-stats {
+  display: flex;
+  justify-content: flex-end;
+  gap: 18px;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  opacity: 0.55;
+  -webkit-app-region: no-drag;
+}
+
+.influx-stage {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.friday-core {
+  position: relative;
+  width: min(720px, 72vw);
+  height: min(620px, 68vh);
+}
+
+.friday-core-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
+  filter: saturate(0.85) contrast(1.08);
+}
+
+.friday-core-veil {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 8, 10, 0.15) 0%, rgba(7, 8, 10, 0.08) 40%, rgba(7, 8, 10, 0.55) 100%);
+  pointer-events: none;
+}
+
+.friday-core-copy {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+  padding: 0 24px;
+}
+
+.friday-kicker {
+  letter-spacing: 0.5em;
+  font-size: 12px;
+  margin-bottom: 14px;
+  opacity: 0.85;
+}
+
+.friday-core-copy h1 {
+  font-size: clamp(36px, 5vw, 64px);
+  font-weight: 800;
+  line-height: 0.95;
+  max-width: 12ch;
+}
+
+.friday-line {
+  margin-top: 16px;
+  max-width: 42ch;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  opacity: 0.72;
+}
+
+.friday-core.status-listening .friday-core-video {
+  filter: saturate(1) contrast(1.12) brightness(1.05);
+}
+.friday-core.status-speaking .friday-core-video {
+  filter: saturate(1.15) contrast(1.18);
+}
+.friday-core.status-thinking .friday-core-video {
+  filter: grayscale(0.2) brightness(0.9);
+}
+
+.command-dock {
+  position: relative;
+  z-index: 8;
+  padding: 0 36px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  -webkit-app-region: no-drag;
+}
+
+.pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
+.pill-row.nested {
+  opacity: 0.95;
+}
+
+.pill {
+  border: 0;
+  border-radius: 999px;
+  padding: 10px 18px;
+  font-family: "Syne", sans-serif;
+  font-size: 13px;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+}
+
+.pill.solid {
+  background: #f4f4f2;
+  color: #111;
+}
+
+.pill.ghost {
+  background: rgba(20, 22, 26, 0.72);
+  color: #f4f4f2;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.pill.ghost::after {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  margin-left: 8px;
+  border-radius: 50%;
+  background: #3ad6e8;
+  vertical-align: middle;
+}
+
+.pill.danger {
+  background: transparent;
+  color: #f4f4f2;
+  box-shadow: inset 0 0 0 1px rgba(255, 107, 90, 0.55);
+}
+
+.command-form {
+  display: flex;
+  gap: 8px;
+  width: min(560px, 90vw);
+}
+
+.command-form input {
+  flex: 1;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(20, 22, 26, 0.78);
+  color: #f4f4f2;
+  padding: 12px 18px;
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  font-family: "Syne", sans-serif;
+}
+

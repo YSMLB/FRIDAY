@@ -5,7 +5,7 @@ declare global {
     friday?: {
       platform: string;
       hide?: () => void;
-      show?: () => void;
+      quit?: () => void;
     };
   }
 }
