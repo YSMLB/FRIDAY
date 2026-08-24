@@ -112,3 +112,4 @@ API keys and settings are stored in `%APPDATA%/FRIDAY/config.json`.
 ## License
 
 MIT
+"# FRIDAYAI" 
