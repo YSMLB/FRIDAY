@@ -1,0 +1,20 @@
+{
+  "name": "friday",
+  "version": "0.1.0",
+  "private": true,
+  "description": "FRIDAY AI Assistant — JARVIS-style desktop AI",
+  "scripts": {
+    "install:all": "npm install --prefix apps/desktop && python -m pip install -r apps/backend/requirements.txt",
+    "free-port": "powershell -ExecutionPolicy Bypass -File scripts/free-port.ps1 -Port 8765",
+    "backend": "powershell -ExecutionPolicy Bypass -File scripts/run-backend.ps1",
+    "desktop": "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File scripts/start-friday.ps1",
+    "predev": "npm run free-port",
+    "dev": "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File scripts/start-friday.ps1",
+    "build": "npm run build --prefix apps/desktop",
+    "autostart:install": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1",
+    "autostart:remove": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1 -Remove"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}
