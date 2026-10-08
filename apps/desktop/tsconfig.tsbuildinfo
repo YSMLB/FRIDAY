@@ -1,0 +1,1 @@
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/components/chatpanel.tsx","./src/components/hudrings.tsx","./src/components/settingspanel.tsx","./src/components/splashscreen.tsx","./src/hooks/usefridayws.ts"],"version":"5.9.3"}
