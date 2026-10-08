@@ -21,10 +21,12 @@ except ImportError:
     WhisperModel = None  # type: ignore
 
 
-MIN_AUDIO_SEC = 0.4
-SPEAKING_COOLDOWN_SEC = 0.7
+MIN_AUDIO_SEC = 0.55
+SPEAKING_COOLDOWN_SEC = 1.4
 TARGET_SR = 16000
-SESSION_HOLD_SEC = 25.0
+SESSION_HOLD_SEC = 18.0
+ECHO_GUARD_SEC = 8.0
+TRANSCRIPT_COOLDOWN_SEC = 1.2
 
 
 def _resample(x: np.ndarray, orig_sr: int, target_sr: int = TARGET_SR) -> np.ndarray:
@@ -81,6 +83,11 @@ class VoicePipeline:
         self.input_gain = 1.0
         self._noise_ema = 0.002
         self._session_until = 0.0
+        self._last_spoken = ""
+        self._last_spoken_at = 0.0
+        self._last_transcript = ""
+        self._last_transcript_at = 0.0
+        self._speaking_hard = False
 
     def set_enabled(self, enabled: bool) -> None:
         self._enabled = enabled
@@ -107,9 +114,18 @@ class VoicePipeline:
 
     def release(self) -> None:
         self._busy.clear()
-        self._muted_until = 0.0
+        self._speaking_hard = False
+        # Keep a short mute tail so TTS tail / speakers don't re-trigger STT.
+        self.mute_for(0.9)
         if self._enabled and not self._stop.is_set():
             self._emit_status("listening")
+
+    def note_spoken(self, text: str) -> None:
+        self._last_spoken = (text or "").strip().lower()
+        self._last_spoken_at = time.time()
+        self._speaking_hard = True
+        est = max(1.6, min(40.0, len(self._last_spoken) / 10.0 + 1.2))
+        self.mute_for(est + SPEAKING_COOLDOWN_SEC)
 
     def _recover_after_error(self, delay: float = 0.8) -> None:
         def _go() -> None:
@@ -305,10 +321,52 @@ class VoicePipeline:
             "music",
             "thanks for watching",
             "thank you",
+            "thanks",
+            "applause",
+            "смех",
+            "аплодисменты",
         }
         if any(j in low for j in junk) and len(original) < 48:
             return None
-        return self._strip_wake(original) or None
+        greetings = {
+            "привет",
+            "приветик",
+            "здравствуй",
+            "здравствуйте",
+            "hello",
+            "hi",
+            "hey",
+            "алло",
+            "слушай",
+            "слушаю",
+            "да",
+            "нет",
+            "угу",
+            "ага",
+        }
+        stripped = self._strip_wake(original)
+        stripped_low = stripped.lower().strip(" .,!?:;—-\t")
+        # Lone greetings / echo of our own TTS — never feed the chat loop.
+        if stripped_low in greetings or low in greetings:
+            return None
+        if len(stripped_low) < 3:
+            return None
+        if self._is_echo(stripped_low):
+            return None
+        return stripped or None
+
+    def _is_echo(self, text: str) -> bool:
+        if not text or not self._last_spoken:
+            return False
+        if time.time() - self._last_spoken_at > ECHO_GUARD_SEC:
+            return False
+        spoken = self._last_spoken
+        if text == spoken or text in spoken or spoken in text:
+            return True
+        # Share first token with recent TTS (привет / слушаю loops).
+        a = text.split()[:2]
+        b = spoken.split()[:2]
+        return bool(a and b and a[0] == b[0] and len(text) < 28)
 
     def _run_loop(self) -> None:
         try:
@@ -321,8 +379,8 @@ class VoicePipeline:
 
         chunk_duration = 0.05
         chunk_samples = int(capture_sr * chunk_duration)
-        max_silence = int(1.4 / chunk_duration)
-        max_record = int(16.0 / chunk_duration)
+        max_silence = int(2.0 / chunk_duration)
+        max_record = int(14.0 / chunk_duration)
         min_frames = int(MIN_AUDIO_SEC / chunk_duration)
 
         recording: list[np.ndarray] = []
@@ -339,7 +397,7 @@ class VoicePipeline:
             nonlocal recording, silence_frames, speaking
             if self._stop.is_set() or not self._enabled:
                 return
-            if self._busy.is_set() or time.time() < self._muted_until:
+            if self._busy.is_set() or self._speaking_hard or time.time() < self._muted_until:
                 speaking = False
                 recording = []
                 silence_frames = 0
@@ -441,7 +499,10 @@ class VoicePipeline:
         ).start()
 
     def _process_recording(self, audio: np.ndarray, capture_sr: int) -> None:
-        if self._busy.is_set():
+        if self._busy.is_set() or self._speaking_hard:
+            return
+        now = time.time()
+        if now - self._last_transcript_at < TRANSCRIPT_COOLDOWN_SEC:
             return
         self._busy.set()
         held_for_chat = False
@@ -458,15 +519,21 @@ class VoicePipeline:
                 best_of=1,
                 temperature=0.0,
                 condition_on_previous_text=False,
-                initial_prompt="Пятница. Русский язык. Погода Оренбург. Открой Steam Discord Cursor.",
+                without_timestamps=True,
+                initial_prompt="Пятница открой Steam. Какая погода.",
             )
             segs = list(segments)
             text = " ".join(s.text.strip() for s in segs).strip()
-            if getattr(info, "language_probability", 1.0) < 0.18 and len(text) < 4:
+            if getattr(info, "language_probability", 1.0) < 0.22 and len(text) < 5:
                 text = ""
 
             if not text:
                 print("[voice] empty/noise: ''")
+                self._emit_status("listening")
+                return
+
+            if self._is_echo(text.lower()):
+                print(f"[voice] echo ignored: {text!r}")
                 self._emit_status("listening")
                 return
 
@@ -477,12 +544,19 @@ class VoicePipeline:
 
             if gated and has_wake:
                 self._session_until = time.time() + SESSION_HOLD_SEC
-                held_for_chat = True
                 if command:
+                    if command == self._last_transcript and now - self._last_transcript_at < 6:
+                        print(f"[voice] dup ignored: {command!r}")
+                        self._emit_status("listening")
+                        return
                     print(f"[voice] heard: {text!r} -> cmd: {command!r}")
+                    self._last_transcript = command
+                    self._last_transcript_at = now
+                    held_for_chat = True
                     self._emit_transcript(command)
                 else:
                     print(f"[voice] wake only: {text!r}")
+                    held_for_chat = True
                     self._emit_event({"type": "wake_ack"})
                 return
 
@@ -492,8 +566,14 @@ class VoicePipeline:
                 return
 
             if command:
+                if command == self._last_transcript and now - self._last_transcript_at < 6:
+                    print(f"[voice] dup ignored: {command!r}")
+                    self._emit_status("listening")
+                    return
                 self._session_until = time.time() + SESSION_HOLD_SEC
                 print(f"[voice] heard: {text!r} -> cmd: {command!r}")
+                self._last_transcript = command
+                self._last_transcript_at = now
                 held_for_chat = True
                 self._emit_transcript(command)
             else:
@@ -512,7 +592,7 @@ class VoicePipeline:
         self.settings.ensure_dirs()
         out_path = self.settings.audio_dir / f"tts_{uuid.uuid4().hex[:8]}.mp3"
         voice = self.settings.tts_voice or "ru-RU-SvetlanaNeural"
-        communicate = edge_tts.Communicate(text, voice)
+        communicate = edge_tts.Communicate(text, voice, rate="+12%")
         await communicate.save(str(out_path))
         return out_path
 
@@ -521,16 +601,24 @@ class VoicePipeline:
         if not clean:
             self.release()
             return
-        est = max(1.3 if len(clean) < 24 else 2.5, min(90.0, len(clean) / 11.0 + 1.0))
-        self.mute_for(est + SPEAKING_COOLDOWN_SEC)
+        if len(clean) > 280:
+            clean = clean[:277].rsplit(" ", 1)[0] + "…"
+        self.note_spoken(clean)
+        self._busy.set()
         await self.on_status("speaking")
         try:
             path = await self.synthesize(clean)
             await self.on_audio(str(path))
-            await asyncio.sleep(est)
+            # Release only on voice_playback_done (or this fallback if UI never ACKs).
+            fallback = min(14.0, max(2.4, len(clean) / 11.0 + 1.5))
+
+            def _fallback() -> None:
+                time.sleep(fallback)
+                if self._speaking_hard:
+                    self.release()
+
+            threading.Thread(target=_fallback, daemon=True, name="friday-tts-fallback").start()
         except Exception as exc:
             print(f"[voice] tts error: {exc}")
             await self.on_status("error")
-            await asyncio.sleep(0.8)
-        finally:
             self.release()

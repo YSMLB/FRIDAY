@@ -7,6 +7,7 @@ import * as http from "http";
 let mainWindow: BrowserWindow | null = null;
 let tray: Tray | null = null;
 let backendProcess: ChildProcess | null = null;
+let quitting = false;
 
 const isDev = !app.isPackaged;
 const BACKEND_HEALTH = "http://127.0.0.1:8765/health";
@@ -149,11 +150,32 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow.on("close", (e) => {
+    if (quitting) return;
     if (tray) {
       e.preventDefault();
       mainWindow?.hide();
     }
   });
+}
+
+function quitFriday(): void {
+  if (quitting) return;
+  quitting = true;
+  tray?.destroy();
+  tray = null;
+  if (backendProcess) {
+    backendProcess.kill();
+    backendProcess = null;
+  }
+  const stop = path.join(__dirname, "..", "..", "..", "scripts", "stop-friday.ps1");
+  if (fs.existsSync(stop)) {
+    spawn("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", stop, "-Quiet"], {
+      windowsHide: true,
+      detached: true,
+      stdio: "ignore",
+    }).unref();
+  }
+  setTimeout(() => app.exit(0), 350);
 }
 
 function createTray(): void {
@@ -182,12 +204,8 @@ function createTray(): void {
     },
     { type: "separator" },
     {
-      label: "Quit",
-      click: () => {
-        tray?.destroy();
-        tray = null;
-        app.quit();
-      },
+      label: "Quit FRIDAY",
+      click: () => quitFriday(),
     },
   ]);
 
@@ -239,6 +257,7 @@ app.whenReady().then(async () => {
   ipcMain.on("friday:show", () => {
     if (mainWindow) coverPrimaryDisplay(mainWindow);
   });
+  ipcMain.on("friday:quit", () => quitFriday());
   await ensureBackend();
   await createWindow();
   createTray();

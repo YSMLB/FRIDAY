@@ -10,6 +10,7 @@
     "desktop": "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File scripts/start-friday.ps1",
     "predev": "npm run free-port",
     "dev": "powershell -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File scripts/start-friday.ps1",
+    "stop": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/stop-friday.ps1",
     "build": "npm run build --prefix apps/desktop",
     "autostart:install": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1",
     "autostart:remove": "powershell -ExecutionPolicy Bypass -File scripts/install-autostart.ps1 -Remove"

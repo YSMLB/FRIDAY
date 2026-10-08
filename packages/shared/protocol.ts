@@ -30,7 +30,8 @@ export type WSClientMessage =
   | { type: "voice_playback_done" }
   | { type: "open_app"; name: string }
   | { type: "web_open"; url: string }
-  | { type: "confirm_action"; actionId: string; confirmed: boolean };
+  | { type: "confirm_action"; actionId: string; confirmed: boolean }
+  | { type: "quit_app" };
 
 export type WSServerMessage =
   | { type: "status"; status: FridayStatus }
@@ -43,7 +44,8 @@ export type WSServerMessage =
   | { type: "voice_transcript"; text: string }
   | { type: "audio_ready"; path: string }
   | { type: "mic_info"; mic: Record<string, unknown> }
-  | { type: "wake_ack" };
+  | { type: "wake_ack" }
+  | { type: "app_quit" };
 
 export const DEFAULT_CONFIG: FridayConfig = {
   llmProvider: "ollama",

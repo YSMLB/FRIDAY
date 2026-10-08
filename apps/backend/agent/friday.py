@@ -9,11 +9,11 @@ from tools.registry import TOOL_DEFINITIONS, confirm_action, execute_tool
 
 SYSTEM_PROMPT = """Ты — Пятница (FRIDAY), персональный AI-ассистент женского рода.
 Говори о себе в женском роде. Тебя вызывают по имени «Пятница».
-Отвечай кратко и по делу — твои ответы озвучиваются голосом, без длинных списков.
-Тон: тёплый, уверенный, слегка профессиональный, как у ассистента из фильма.
-Если спрашивают погоду — вызови get_weather с городом.
-Если просят открыть программу — вызови open_app.
-Язык ответа — тот, на котором обратился пользователь (обычно русский)."""
+Отвечай ОЧЕНЬ кратко — 1–2 коротких предложения, без приветствий в каждом ответе.
+Не здоровайся повторно. Не пиши списки. Тон уверенный и спокойный.
+Ты управляешь этим компьютером: приложения, папки, громкость, яркость, медиа, блокировка,
+скриншот, процессы. Выключать Windows — system_power. Закрыть себя — quit_friday.
+Язык ответа — язык пользователя (обычно русский)."""
 
 MAX_TOOL_ROUNDS = 5
 
@@ -61,14 +61,14 @@ class FridayAgent:
             for tc in tool_calls:
                 name = tc["name"]
                 args = tc.get("arguments", {})
-                action_id = str(uuid.uuid4()) if name == "system_power" else None
+                action_id = str(uuid.uuid4()) if name in ("system_power", "close_app", "empty_recycle") else None
 
                 if on_tool:
                     await on_tool(name, args)
 
                 result, needs_confirm = await execute_tool(name, args, action_id)
                 if needs_confirm and on_confirm and action_id:
-                    await on_confirm(action_id, f"Confirm {args.get('action')} the computer?")
+                    await on_confirm(action_id, f"Confirm {name} ({args})?")
                     result = f"Confirmation requested for {args.get('action')}."
 
                 tool_msg = f"[Tool {name} result]: {result}"

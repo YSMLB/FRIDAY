@@ -37,6 +37,12 @@ def open_app(name: str) -> str:
     if not name:
         return "No application name provided."
     key = name.strip().lower()
+    if key.startswith("steam://"):
+        try:
+            os.startfile(name.strip())  # type: ignore[attr-defined]
+            return f"Launched {name}."
+        except Exception as exc:
+            return f"Failed to launch {name}: {exc}"
     cmd = APP_ALIASES.get(key, name.strip())
     try:
         if os.name == "nt":
@@ -46,6 +52,19 @@ def open_app(name: str) -> str:
         return f"Opened {name}."
     except Exception as exc:
         return f"Failed to open {name}: {exc}"
+
+
+def open_launch_target(target: str) -> str:
+    raw = (target or "").strip()
+    if not raw:
+        return "Nothing to launch."
+    if raw.startswith("steam://") or raw.startswith("http://") or raw.startswith("https://"):
+        try:
+            os.startfile(raw)  # type: ignore[attr-defined]
+            return f"Launched."
+        except Exception as exc:
+            return f"Launch failed: {exc}"
+    return open_app(raw)
 
 
 def set_volume(level: int) -> str:

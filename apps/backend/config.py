@@ -43,7 +43,7 @@ class Settings(BaseSettings):
     wake_word_enabled: bool = True
     wake_word: str = "пятница"
     tts_voice: str = "ru-RU-SvetlanaNeural"
-    stt_model: str = "base"
+    stt_model: str = "tiny"
 
     autostart: bool = True
     splash_duration_ms: int = 2500
